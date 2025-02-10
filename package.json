@@ -1,6 +1,6 @@
 {
   "name": "start-my-backend",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "description": "Generador de proyectos backend",
   "main": "src/bin/start-backend.js",
   "bin": {

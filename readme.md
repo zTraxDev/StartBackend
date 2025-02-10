@@ -7,7 +7,8 @@ Generador de proyectos backend con soporte para **Express** y su ecosistema. Act
 ## ✨ Características
 
 - 💼 **Generador de Proyectos Backend**: Configuración inicial rápida y sencilla para tus proyectos backend.
-- ⚡ **Soporte para Express**: Aprovecha la potencia y flexibilidad de Express para construir aplicaciones backend robustas.
+- 🚀 **Multi-Framework**: Soporte para Express y Hono
+- 🔄 **Integracion con ORM**: Sequelize (SQL) y TypeORM (SQL/NoSQL)
 - 🚀 **Estructura Modular**: Configuración con estructura modular para mejorar la organización del código.
 - 📄 **Soporte para MVC**: Opción para generar archivos siguiendo el patrón Modelo-Vista-Controlador.
 - 🛠️ **Opcional: Integración con Base de Datos**: Soporte para MongoDB, MySQL, PostgreSQL y SQLite.
