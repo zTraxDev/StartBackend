@@ -8,7 +8,7 @@ export function generate(basePath, options) {
     const indexContent = `
 import express from 'express';
 import { config } from './config/config${ext}';
-${options.useMongoDB ? `import './db${ext}';` : ''}
+${options.useMongoDB ? `import './config/db${ext}';` : ''}
 
 const app = express();
 const PORT = config.port;

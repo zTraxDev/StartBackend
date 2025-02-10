@@ -5,9 +5,7 @@ import { installDependencies } from './dependencyUtils.js';
 import { generate as generateExpress } from './framework/express.js';
 import { generate as generateFastify } from './framework/fastify.js';
 import { setupDatabase } from './project-setup.js';
-
-import path from 'path';
-import { set } from 'mongoose';
+import path from 'path'; 
 
 export function generateFiles(projectDir, options = { 
     useTypeScript: false, 
@@ -49,7 +47,7 @@ function createFolderStructure(basePath, options) {
         createFolder(path.resolve(basePath, 'dist'));
     }
     
-    if(options.useLogger){
+    if (options.useLogger) {
         createFolder(path.resolve(srcPath, 'logger'));
     }
 
@@ -134,5 +132,5 @@ router.get('/example', exampleController);
 
 export default router;
     `.trim();
-    writeFile(path.resolve(srcPath, 'routes', `example.route${ext}`), routeContent);
+    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
 }
