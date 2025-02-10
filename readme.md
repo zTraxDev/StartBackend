@@ -1,6 +1,6 @@
 # 🌟 Generador de Proyectos Backend 🌟
 
-![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black) ![License](https://img.shields.io/github/license/tu-repo/start-my-backend?style=for-the-badge)
+![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black) ![License](https://img.shields.io/github/license/zTraxDev/StartBackend?style=for-the-badge)
 
 Generador de proyectos backend con soporte para **Express** y su ecosistema. Actualmente no cuenta con soporte para TypeScript ni otros frameworks por el momento.
 
@@ -12,6 +12,7 @@ Generador de proyectos backend con soporte para **Express** y su ecosistema. Act
 - 📄 **Soporte para MVC**: Opción para generar archivos siguiendo el patrón Modelo-Vista-Controlador.
 - 🛠️ **Opcional: Integración con Base de Datos**: Soporte para MongoDB, MySQL, PostgreSQL y SQLite.
 - 🚫 **Sin soporte para TypeScript**: Por ahora, solo admite proyectos en JavaScript.
+
 
 ## 📦 Instalación
 
