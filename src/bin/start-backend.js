@@ -3,7 +3,6 @@
 import { generateFiles } from "../lib/file-generator.js";
 import { askQuestions } from "../lib/prompt.js";
 import { validateProjectName, GREEN, NC } from "../lib/utils.js";
-import { generateMvcFiles } from "../lib/configUtil.js";
 import path from "path";
 
 (async () => {

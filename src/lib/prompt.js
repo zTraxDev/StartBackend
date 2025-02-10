@@ -26,6 +26,15 @@ export async function askQuestions() {
           message: '¿Qué base de datos deseas usar?',
           choices: ['MongoDB', 'MySQL', 'PostgreSQL', 'SQLite'],
       },
+      // Pregunta condicional para seleccionar el ORM
+      {
+          type: 'list',
+          name: 'orm',
+          message: '¿Qué ORM deseas usar?',
+          choices: ['Ninguno', 'Sequelize', 'TypeORM'],
+          when: (answers) => answers.database !== 'MongoDB',
+          default: 'Ninguno',
+      },
       {
           type: 'confirm',
           name: 'installEcosystem',

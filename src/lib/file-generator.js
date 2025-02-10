@@ -4,7 +4,10 @@ import { writePackageJson } from './packageUtils.js';
 import { installDependencies } from './dependencyUtils.js';
 import { generate as generateExpress } from './framework/express.js';
 import { generate as generateFastify } from './framework/fastify.js';
+import { setupDatabase } from './project-setup.js';
+
 import path from 'path';
+import { set } from 'mongoose';
 
 export function generateFiles(projectDir, options = { 
     useTypeScript: false, 
@@ -19,7 +22,7 @@ export function generateFiles(projectDir, options = {
     createFolderStructure('.', options);
     
     writeEnvFile(options.database);
-    writeDbFile(options.useTypeScript, options.database);
+    setupDatabase(options.database, options.useTypeScript, options.orm);
     writeConfigFile(options.useTypeScript, options.database);
     writePackageJson(path.basename(projectDir), options.useTypeScript);
     
@@ -46,6 +49,10 @@ function createFolderStructure(basePath, options) {
         createFolder(path.resolve(basePath, 'dist'));
     }
     
+    if(options.useLogger){
+        createFolder(path.resolve(srcPath, 'logger'));
+    }
+
     if (options.useMVC) {
         const mvcFolders = ['controllers', 'routes'];
         

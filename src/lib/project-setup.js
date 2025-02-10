@@ -2,52 +2,55 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
+import { installDependencies } from "./dependencyUtils.js";
+import { writePackageJson } from "./packageUtils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function generateFiles(projectDir, options = { useTypeScript: false, useMVC: false, database: "MongoDB", framework: "Express" }) {
+/**
+ * @typedef {Object} ProjectOptions
+ * @property {boolean} useTypeScript
+ * @property {boolean} useMVC
+ * @property {'MongoDB' | 'MySQL' | 'PostgreSQL' | 'SQLite'} database
+ * @property {'Express' | 'Fastify'} framework
+ * @property {boolean} installEcosystem
+ * @property {'Ninguno' | 'Sequelize' | 'TypeORM'} orm
+ */
+
+/**
+ * Generates project files based on provided options
+ * @param {string} projectDir - Directory of the project
+ * @param {ProjectOptions} options - Project configuration options
+ */
+function generateFiles(projectDir, options = { useTypeScript: false, useMVC: false, database: "MongoDB", framework: "Express", installEcosystem: false, orm: 'Ninguno' }) {
     if (!fs.existsSync(projectDir)) fs.mkdirSync(projectDir, { recursive: true });
     process.chdir(projectDir);
 
     createFolderStructure(options.useMVC);
     generateBaseFiles(options.framework, options.useMVC, options.useTypeScript);
-    setupDatabase(options.database, options.useTypeScript);
+    setupDatabase(options.database, options.useTypeScript, options.orm);
     writeEnvFile(options.database);
     writeConfigFile(options.useTypeScript, options.database);
-    configureNpmScripts(options.useTypeScript);
-    installDependencies(options.useTypeScript, options.database, options.framework);
+    writePackageJson(path.basename(projectDir), options.useTypeScript);
+    installDependencies(options);
 }
 
-function installDependencies(useTypeScript, database, framework) {
-    const dependencies = [framework.toLowerCase(), "dotenv"];
-    const dbDependencies = { MongoDB: "mongoose", MySQL: "mysql2", PostgreSQL: "pg", SQLite: "sqlite3" };
-    if (dbDependencies[database]) dependencies.push(dbDependencies[database]);
-    if (useTypeScript) dependencies.push("typescript", "@types/node", "ts-node", "nodemon");
-
-    // Agregar tipos específicos del framework
-    if (useTypeScript) {
-        if (framework === "Express") {
-            dependencies.push("@types/express");
-        } else if (framework === "Fastify") {
-            dependencies.push("@types/fastify");
-        }
-    }
-
-    console.log("📦 Instalando dependencias...");
-    execSync(`npm install ${dependencies.join(" ")}`, { stdio: "inherit" });
-
-    if (useTypeScript) {
-        console.log("🛠️ Configurando TypeScript...");
-        execSync("npx tsc --init", { stdio: "inherit" });
-    }
-}
-
+/**
+ * Creates the folder structure for the project
+ * @param {boolean} useMVC - Whether to use MVC structure
+ */
 function createFolderStructure(useMVC) {
     const folders = ["src", ...(useMVC ? ["src/controllers", "src/models", "src/routes"] : [])];
     folders.forEach(folder => fs.mkdirSync(path.resolve(folder), { recursive: true }));
 }
 
+/**
+ * Generates the base files for the project
+ * @param {string} framework - The framework to use
+ * @param {boolean} useMVC - Whether to use MVC structure
+ * @param {boolean} typescript - Whether to use TypeScript
+ */
 function generateBaseFiles(framework, useMVC, typescript) {
     const ext = typescript ? "ts" : "js";
     const frameworkImport = framework.toLowerCase();
@@ -86,10 +89,62 @@ app.listen(PORT, () => {
     }
 }
 
-function setupDatabase(database, typescript) {
+/**
+ * Sets up the database configuration
+ * @param {string} database - The database to use
+ * @param {boolean} typescript - Whether to use TypeScript
+ * @param {string} orm - The ORM to use
+ */
+/**
+ * Sets up the database configuration
+ * @param {string} database - The database to use
+ * @param {boolean} typescript - Whether to use TypeScript
+ * @param {string} orm - The ORM to use
+ */
+export function setupDatabase(database, typescript, orm) {
     const ext = typescript ? "ts" : "js";
-    const dbContent = {
-        MongoDB: `
+    let dbContent = '';
+
+    if (orm === 'Sequelize') {
+        dbContent = `
+import { Sequelize } from 'sequelize';
+import { config } from './config.${ext}';
+
+export const sequelize = new Sequelize(config.databaseUrl);
+
+sequelize.authenticate()
+    .then(() => console.log('Sequelize conectado'))
+    .catch(err => console.error('Error conectando a Sequelize:', err));
+`.trim();
+    } else if (orm === 'TypeORM') {
+        dbContent = `
+import "reflect-metadata";
+import { DataSource } from 'typeorm';
+import { config } from './config.${ext}';
+
+export const AppDataSource = new DataSource({
+    type: '${database.toLowerCase()}',
+    host: config.${database === "MySQL" ? 'mysqlHost' : database === "PostgreSQL" ? 'pgHost' : 'sqlitePath'},
+    port: config.${database === "MySQL" ? 'mysqlPort' : database === "PostgreSQL" ? 'pgPort' : 'sqlitePort'},
+    username: config.${database === "MySQL" ? 'mysqlUser' : 'pgUser'},
+    password: config.${database === "MySQL" ? 'mysqlPassword' : 'pgPassword'},
+    database: config.${database === "MySQL" ? 'mysqlDatabase' : 'pgDatabase'},
+    synchronize: true,
+    logging: false,
+    entities: [],
+    migrations: [],
+    subscribers: [],
+});
+
+AppDataSource.initialize()
+    .then(() => {
+        console.log('TypeORM conectado');
+    })
+    .catch((error) => console.log('Error conectando a TypeORM:', error));
+`.trim();
+    } else {
+        dbContent = {
+            MongoDB: `
 import mongoose from 'mongoose';
 import { config } from './config.${ext}';
 
@@ -105,7 +160,7 @@ export const connectDB = async () => {
     }
 };
 `.trim(),
-        MySQL: `
+            MySQL: `
 import mysql from 'mysql2';
 import { config } from './config.${ext}';
 
@@ -124,7 +179,7 @@ connection.connect((err) => {
     }
 });
 `.trim(),
-        PostgreSQL: `
+            PostgreSQL: `
 import { Pool } from 'pg';
 import { config } from './config.${ext}';
 
@@ -140,7 +195,7 @@ pool.on('connect', () => {
     console.log('PostgreSQL conectado');
 });
 `.trim(),
-        SQLite: `
+            SQLite: `
 import sqlite3 from 'sqlite3';
 import { config } from './config.${ext}';
 
@@ -152,11 +207,17 @@ export const db = new sqlite3.Database(config.sqlitePath || ':memory:', (err) =>
     }
 });
 `.trim(),
-    };
+        }[database];
+    }
 
-    fs.writeFileSync(path.resolve("src/config", `db.${ext}`), dbContent[database]);
+    fs.writeFileSync(path.resolve("src/config", `db.${ext}`), dbContent);
 }
 
+
+/**
+ * Writes the .env file based on the selected database
+ * @param {string} database - The database to use
+ */
 function writeEnvFile(database) {
     const envContent = `
 PORT=3000
@@ -180,6 +241,11 @@ ${database === "SQLite" ? "SQLITE_PATH=./database.sqlite" : ""}
     fs.writeFileSync(path.resolve(".env"), envContent);
 }
 
+/**
+ * Writes the config file based on the selected database and TypeScript option
+ * @param {boolean} useTypeScript - Whether to use TypeScript
+ * @param {string} database - The database to use
+ */
 function writeConfigFile(useTypeScript, database) {
     const ext = useTypeScript ? "ts" : "js";
     const configContent = `
@@ -206,24 +272,13 @@ export const config = {
 };
 `.trim();
 
-    fs.writeFileSync(path.resolve("src/config.${ext}"), configContent);
+    fs.writeFileSync(path.resolve(`src/config.${ext}`), configContent);
 }
 
-function configureNpmScripts(useTypeScript) {
-    const packageJson = {
-        name: "my-backend",
-        version: "1.0.0",
-        main: `src/index.${useTypeScript ? "ts" : "js"}`,
-        scripts: {
-            start: useTypeScript ? "node dist/index.js" : "node src/index.js",
-            dev: useTypeScript
-                ? 'nodemon --watch "src/**/*.ts" --exec "ts-node" src/index.ts'
-                : "nodemon src/index.js",
-            build: useTypeScript ? "tsc" : undefined,
-        },
-        dependencies: {},
-        devDependencies: {},
-    };
-
-    fs.writeFileSync(path.resolve("package.json"), JSON.stringify(packageJson, null, 2));
-}
+export {
+    generateFiles,
+    createFolderStructure,
+    generateBaseFiles,
+    writeEnvFile,
+    writeConfigFile,
+};
