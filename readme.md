@@ -43,6 +43,7 @@ start-backend nombre-del-proyecto --database MongoDB --mvc true
 |---------------------|-------------|
 | `--database`       | Base de datos a usar (`MongoDB`, `MySQL`, `PostgreSQL`, `SQLite`). |
 | `--mvc`            | Si se debe usar estructura MVC (`true` o `false`). |
+| `--orm`            | ORM a usar (`Sequelize` o `TypeORM`). |
 
 ## 📂 Estructura del Proyecto
 
@@ -53,7 +54,7 @@ nombre-del-proyecto/
 ├── src/
 │   ├── config/
 │   ├── controllers/
-│   ├── models/ (En caso de usar MongoDB)
+│   ├── models/ (En caso de usar MongoDB o ORM)
 │   ├── routes/
 │   ├── db.js
 │   ├── index.js
