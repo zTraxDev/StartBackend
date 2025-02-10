@@ -66,5 +66,5 @@ Este proyecto está bajo la licencia **MIT**. ¡Siéntete libre de usarlo y cont
 
 ## 📬 Contacto
 
-Si tienes dudas, problemas o sugerencias, abre un issue en el repositorio o contáctame en **[https://github.com/zTraxDev]** 🚀.
+Si tienes dudas, problemas o sugerencias, abre un issue en el repositorio o contáctame en **[zTraxDev](https://github.com/zTraxDev)** 🚀.
 
