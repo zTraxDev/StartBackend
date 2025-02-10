@@ -12,7 +12,7 @@ export async function askQuestions() {
           type: 'list',
           name: 'framework',
           message: '¿Qué framework deseas usar?',
-          choices: ['Express'],
+          choices: ['Express', 'Hono'],
       },
       {
           type: 'confirm',

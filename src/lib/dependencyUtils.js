@@ -25,6 +25,8 @@ export function installDependencies(useTypeScript, database, framework, installE
         }
     } else if (framework === "Fastify") {
         dependencies.push("fastify", "fastify-cli");
+    } else if (framework === 'Hono'){
+        dependencies.push('hono', '@hono/node-server');
     }
 
     // Dependencias de la base de datos

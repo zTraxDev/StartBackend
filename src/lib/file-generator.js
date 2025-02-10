@@ -4,6 +4,7 @@ import { writePackageJson } from './packageUtils.js';
 import { installDependencies } from './dependencyUtils.js';
 import { generate as generateExpress } from './framework/express.js';
 import { generate as generateFastify } from './framework/fastify.js';
+import { generate as generateHono } from './framework/Hono.js';
 import { setupDatabase } from './project-setup.js';
 import path from 'path'; 
 
@@ -28,6 +29,8 @@ export function generateFiles(projectDir, options = {
         generateExpress('.', options);
     } else if (options.framework === 'Fastify') {
         generateFastify('.', options);
+    } else if (options.framework === 'Hono') {
+        generateHono('.', options); // 🔥 Aseguramos que `options` se pase correctamente
     }
     
     if (options.useMVC) {
@@ -36,6 +39,7 @@ export function generateFiles(projectDir, options = {
     
     installDependencies(options.useTypeScript, options.database, options.framework, options.installEcosystem, options.orm);
 }
+
 
 function createFolderStructure(basePath, options) {
     const srcPath = path.resolve(basePath, 'src');
@@ -66,6 +70,14 @@ function generateMvcFiles(basePath, options) {
     const ext = options.useTypeScript ? '.ts' : '.js';
     const srcPath = path.resolve(basePath, 'src');
 
+    if (options.framework === 'Hono') {
+        generateHonoMvcFiles(srcPath, ext);
+    } else {
+        generateExpressFastifyMvcFiles(srcPath, ext, options);
+    }
+}
+
+function generateExpressFastifyMvcFiles(srcPath, ext, options) {
     const controllerContent = `
 export const exampleController = (req, res) => {
     res.send('¡Hola desde el controlador de ejemplo!');
@@ -73,6 +85,66 @@ export const exampleController = (req, res) => {
     `.trim();
     writeFile(path.resolve(srcPath, 'controllers', `example.controller${ext}`), controllerContent);
 
+    const routeContent = `
+import { Router } from 'express';
+import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
+
+const router = Router();
+router.get('/example', exampleController);
+
+export default router;
+    `.trim();
+    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
+}
+
+
+function generateHonoMvcFiles(srcPath, ext, options = {}) {
+    options.database = options.database || 'MongoDB';
+    options.orm = options.orm || 'Ninguno';
+
+    const controllerContent = `
+export const exampleController = (c) => {
+    return c.json({ message: '¡Hola desde el controlador de ejemplo!' });
+};
+    `.trim();
+    writeFile(path.resolve(srcPath, 'controllers', `example.controller${ext}`), controllerContent);
+
+    const routeContent = `
+import { Hono } from 'hono';
+import { exampleController } from '../controllers/example.controller.js${ext.slice(0, -3)}';
+
+const exampleRouter = new Hono();
+
+exampleRouter.get('/example', exampleController);
+
+export default exampleRouter;
+    `.trim();
+    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
+
+    const appContent = `
+import { Hono } from 'hono';
+import exampleRouter from './routes/example.routes.js${ext.slice(0, -3)}';
+
+const app = new Hono();
+
+app.route('/', exampleRouter);
+
+export default app;
+    `.trim();
+    writeFile(path.resolve(srcPath, `app${ext}`), appContent);
+
+    const indexContent = `
+import { serve } from '@hono/node-server';
+import { config } from './config/config.js'
+import app from './app.js${ext.slice(0, -3)}';
+
+serve(app).addListener('listening', () => {
+    console.log(\`🚀 Servidor Hono corriendo en http://localhost:\${config.port}\`);
+})
+    `.trim();
+    writeFile(path.resolve(srcPath, `index${ext}`), indexContent);
+
+    // 🔥 Generación del modelo
     if (options.database === 'MongoDB' || (options.database !== 'MongoDB' && options.orm !== 'Ninguno')) {
         let modelContent = '';
 
@@ -122,15 +194,4 @@ export class Example {
 
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
-
-    const routeContent = `
-import { Router } from 'express';
-import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
-
-const router = Router();
-router.get('/example', exampleController);
-
-export default router;
-    `.trim();
-    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
 }
