@@ -78,6 +78,7 @@ function generateMvcFiles(basePath, options) {
 }
 
 function generateExpressFastifyMvcFiles(srcPath, ext, options) {
+    // Generar Controlador
     const controllerContent = `
 export const exampleController = (req, res) => {
     res.send('¡Hola desde el controlador de ejemplo!');
@@ -85,6 +86,59 @@ export const exampleController = (req, res) => {
     `.trim();
     writeFile(path.resolve(srcPath, 'controllers', `example.controller${ext}`), controllerContent);
 
+    // Generar Modelo (si aplica)
+    if (options.database === 'MongoDB' || (options.database !== 'MongoDB' && options.orm !== 'Ninguno')) {
+        let modelContent = '';
+
+        if (options.database === 'MongoDB') {
+            modelContent = `
+import mongoose from 'mongoose';
+const exampleSchema = new mongoose.Schema({
+    name: String,
+    age: Number,
+});
+export const Example = mongoose.model('Example', exampleSchema);
+            `.trim();
+        } else if (options.orm === 'Sequelize') {
+            modelContent = `
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db${ext}';
+
+class Example extends Model {}
+
+Example.init({
+    name: DataTypes.STRING,
+    age: DataTypes.INTEGER,
+}, {
+    sequelize,
+    modelName: 'Example',
+});
+
+export default Example;
+            `.trim();
+        } else if (options.orm === 'TypeORM') {
+            modelContent = `
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Example {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    age: number;
+}
+            `.trim();
+        }
+
+        // 🔥 Escribir archivo del modelo
+        writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
+    }
+
+    // Generar Ruta
     const routeContent = `
 import { Router } from 'express';
 import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
@@ -194,4 +248,4 @@ export class Example {
 
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
-}
+ }
