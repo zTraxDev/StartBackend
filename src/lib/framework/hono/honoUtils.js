@@ -57,7 +57,7 @@ export const Example = mongoose.model('Example', exampleSchema);
         } else if (options.orm === 'Sequelize') {
             modelContent = `
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/db${ext}';
+import { sequelize } from '../config/db';
 
 class Example extends Model {}
 

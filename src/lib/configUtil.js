@@ -1,7 +1,7 @@
 import path from "path";
 import { writeFile } from "./fileUtils.js";
 
-export function writeEnvFile(database) {
+export function writeEnvFile(database, orm) {
     const envPath = path.resolve(".env"); // Usa path.resolve
     let envContent = "PORT=3000\n";
 
@@ -10,17 +10,25 @@ export function writeEnvFile(database) {
             envContent += "MONGODB_URI=mongodb://localhost:27017/mydatabase\n";
             break;
         case "MySQL":
-            envContent += "MYSQL_HOST=localhost\n";
-            envContent += "MYSQL_USER=root\n";
-            envContent += "MYSQL_PASSWORD=\n";
-            envContent += "MYSQL_DATABASE=mydatabase\n";
+            if (orm === "Sequelize") {
+                envContent += "MYSQL_URI=mysql://root:@localhost:3306/mydatabase\n";
+            } else {
+                envContent += "MYSQL_HOST=localhost\n";
+                envContent += "MYSQL_USER=root\n";
+                envContent += "MYSQL_PASSWORD=\n";
+                envContent += "MYSQL_DATABASE=mydatabase\n";
+            }
             break;
         case "PostgreSQL":
-            envContent += "PGUSER=postgres\n";
-            envContent += "PGHOST=localhost\n";
-            envContent += "PGDATABASE=mydatabase\n";
-            envContent += "PGPASSWORD=\n";
-            envContent += "PGPORT=5432\n";
+            if (orm === "Sequelize" || orm === "TypeORM") {
+                envContent += "PG_URI=postgres://postgres:@localhost:5432/mydatabase\n";
+            } else {
+                envContent += "PGUSER=postgres\n";
+                envContent += "PGHOST=localhost\n";
+                envContent += "PGDATABASE=mydatabase\n";
+                envContent += "PGPASSWORD=\n";
+                envContent += "PGPORT=5432\n";
+            }
             break;
         case "SQLite":
             envContent += "SQLITE_PATH=./database.sqlite\n";
@@ -168,18 +176,18 @@ export const config = {
     writeFile(configPath, content);
 }
 
-function getDatabaseConfig(database) {
+function getDatabaseConfig(database, orm) {
     switch (database) {
         case "MongoDB":
             return "mongodbUri: process.env.MONGODB_URI,";
         case "MySQL":
-            return `
+            return orm === "Sequelize" ? "mysqlUri: process.env.MYSQL_URI," : `
                 mysqlHost: process.env.MYSQL_HOST,
                 mysqlUser: process.env.MYSQL_USER,
                 mysqlPassword: process.env.MYSQL_PASSWORD,
                 mysqlDatabase: process.env.MYSQL_DATABASE,`;
         case "PostgreSQL":
-            return `
+            return orm === "Sequelize" || orm === "TypeORM" ? "pgUri: process.env.PG_URI," : `
                 pgUser: process.env.PGUSER,
                 pgHost: process.env.PGHOST,
                 pgDatabase: process.env.PGDATABASE,

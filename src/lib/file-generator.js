@@ -1,5 +1,7 @@
 import { createFolder, writeFile } from './fileUtils.js';
-import { writeEnvFile, writeDbFile, writeConfigFile } from './configUtil.js';
+import { writeDbFile} from './configUtil.js';
+import { writeConfigFile } from './project-setup.js';
+import { writeEnvFile } from './project-setup.js';
 import { writePackageJson } from './packageUtils.js';
 import { installDependencies } from './dependencyUtils.js';
 import { generate as generateExpress } from './framework/express.js';
@@ -20,9 +22,9 @@ export function generateFiles(projectDir, options = {
     process.chdir(projectDir);
     createFolderStructure('.', options);
     
-    writeEnvFile(options.database);
+    writeEnvFile(options.database, options.orm);
     setupDatabase(options.database, options.useTypeScript, options.orm);
-    writeConfigFile(options.useTypeScript, options.database);
+    writeConfigFile(options.useTypeScript, options.database, options.orm);
     writePackageJson(path.basename(projectDir), options.useTypeScript);
     
     if (options.framework === 'Express') {
@@ -120,7 +122,7 @@ export const Example = mongoose.model('Example', exampleSchema);
         } else if (options.orm === 'Sequelize') {
             modelContent = options.useTypeScript ? `
 import { DataTypes, Model, Optional } from 'sequelize';
-import { sequelize } from '../config/db${ext}';
+import { sequelize } from '../config/db';
 
 interface ExampleAttributes {
     id: number;
@@ -148,7 +150,7 @@ Example.init({
 export default Example;
             `.trim() : `
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/db${ext}';
+import { sequelize } from '../config/db';
 
 class Example extends Model {}
 
@@ -195,6 +197,7 @@ export class Example {
             `.trim();
         }
 
+        console.log(`Generando modelo en: ${path.resolve(srcPath, 'models', `example.model${ext}`)}`)
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
 
@@ -310,14 +313,14 @@ serve(app).addListener('listening', () => {
     writeFile(path.resolve(srcPath, `index${ext}`), indexContent);
 
     // Modelos si hay base de datos
-    if (options.database === 'MongoDB' || (options.database !== 'MongoDB' && options.orm !== 'Ninguno')) {
+    if (options.database === 'MongoDB' || options.orm !== 'Ninguno') {
         let modelContent = '';
 
         if (options.database === 'MongoDB') {
             modelContent = options.useTypeScript ? `
 import { Schema, model } from 'mongoose';
 
-export interface IExample {
+interface IExample {
     name: string;
     age: number;
 }
@@ -338,10 +341,82 @@ const exampleSchema = new mongoose.Schema({
 
 export const Example = mongoose.model('Example', exampleSchema);
             `.trim();
+        } else if (options.orm === 'Sequelize') {
+            modelContent = options.useTypeScript ? `
+import { DataTypes, Model, Optional } from 'sequelize';
+import { sequelize } from '../config/db';
+
+interface ExampleAttributes {
+    id: number;
+    name: string;
+    age: number;
+}
+
+interface ExampleCreationAttributes extends Optional<ExampleAttributes, 'id'> {}
+
+class Example extends Model<ExampleAttributes, ExampleCreationAttributes> implements ExampleAttributes {
+    public id!: number;
+    public name!: string;
+    public age!: number;
+}
+
+Example.init({
+    name: DataTypes.STRING,
+    age: DataTypes.INTEGER,
+}, {
+    sequelize,
+    modelName: 'Example'
+});
+
+export default Example;
+            `.trim() : `
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db';
+
+class Example extends Model {}
+
+Example.init({
+    name: DataTypes.STRING,
+    age: DataTypes.INTEGER,
+}, {
+    sequelize,
+    modelName: 'Example',
+});
+
+export default Example;
+            `.trim();
+        } else if (options.orm === 'TypeORM') {
+            modelContent = options.useTypeScript ? `
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Example {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    age: number;
+}
+            `.trim() : `
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Example {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    age: number;
+}
+            `.trim();
         }
 
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
 }
-
-// En dependencyUtils.js actualizar las dependencias de TypeScript
