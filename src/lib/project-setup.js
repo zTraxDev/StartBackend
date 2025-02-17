@@ -146,13 +146,11 @@ AppDataSource.initialize()
         dbContent = {
             MongoDB: `
 import mongoose from 'mongoose';
-import { config } from './config.${ext}';
+import { config } from './config';
 
 export const connectDB = async () => {
     try {
         await mongoose.connect(config.mongodbUri || '', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
         });
         console.log('MongoDB conectado');
     } catch (error) {

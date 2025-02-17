@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import fs from "fs";
 
 /**
  * Instala las dependencias del proyecto
@@ -6,8 +7,9 @@ import { execSync } from "child_process";
  * @param {string} database - La base de datos a utilizar
  * @param {string} framework - El framework a utilizar
  * @param {boolean} installEcosystem - Si se debe instalar el ecosistema
+ * @param {string} orm - El ORM a utilizar (opcional)
  */
-export function installDependencies(useTypeScript, database, framework, installEcosystem) {
+export function installDependencies(useTypeScript, database, framework, installEcosystem, orm = "Ninguno") {
     const dependencies = ["dotenv", "nodemon"];
 
     // Dependencias del framework
@@ -25,7 +27,7 @@ export function installDependencies(useTypeScript, database, framework, installE
         }
     } else if (framework === "Fastify") {
         dependencies.push("fastify", "fastify-cli");
-    } else if (framework === 'Hono'){
+    } else if (framework === 'Hono') {
         dependencies.push('hono', '@hono/node-server');
     }
 
@@ -40,7 +42,7 @@ export function installDependencies(useTypeScript, database, framework, installE
 
     // Dependencias de TypeScript
     if (useTypeScript) {
-        dependencies.push("typescript", "@types/node", "ts-node");
+        dependencies.push("typescript", "@types/node", "ts-node", "tsc-watch", 'zod');
 
         if (framework === "Express") {
             dependencies.push("@types/express");
@@ -56,6 +58,22 @@ export function installDependencies(useTypeScript, database, framework, installE
         }
     }
 
+    // Dependencias del ORM
+    if (orm !== "Ninguno") {
+        if (orm === "Sequelize") {
+            dependencies.push("sequelize", "sequelize-cli");
+            if (database === "PostgreSQL") {
+                dependencies.push("pg-hstore");
+            } else if (database === "MySQL") {
+                dependencies.push("mysql2");
+            } else if (database === "SQLite") {
+                dependencies.push("sqlite3");
+            }
+        } else if (orm === "TypeORM") {
+            dependencies.push("typeorm", "reflect-metadata");
+        }
+    }
+
     console.log("📦 Instalando dependencias...");
     try {
         execSync(`npm install ${dependencies.join(" ")}`, { stdio: "inherit" });
@@ -64,13 +82,38 @@ export function installDependencies(useTypeScript, database, framework, installE
         console.error("❌ Error durante la instalación de dependencias:", error.message);
     }
 
+    // Configuración de TypeScript
     if (useTypeScript) {
-        console.log("🛠️ Configurando TypeScript...");
-        try {
-            execSync("npx tsc --init", { stdio: "inherit" });
-            console.log("✅ TypeScript configurado correctamente.");
-        } catch (error) {
-            console.error("❌ Error durante la configuración de TypeScript:", error.message);
-        }
+        const tsconfig = {
+            "compilerOptions": {
+                "target": "ESNext",
+                "module": "CommonJS",
+                "moduleResolution": "Node",
+                "outDir": "./dist",
+                "rootDir": "./src",
+                "strict": true,
+                "esModuleInterop": true,
+                "skipLibCheck": true,
+                "forceConsistentCasingInFileNames": true,
+                "resolveJsonModule": true,
+                "allowSyntheticDefaultImports": true,
+                "noImplicitAny": true,
+                "strictNullChecks": true,
+                "strictFunctionTypes": true,
+                "strictPropertyInitialization": true,
+                "noUnusedLocals": true,
+                "noUnusedParameters": true,
+                "noFallthroughCasesInSwitch": true,
+                ...(orm === 'TypeORM' && {
+                    "experimentalDecorators": true,
+                    "emitDecoratorMetadata": true
+                })
+            },
+            "include": ["src"],
+            "exclude": ["node_modules", "dist"]
+        };
+        fs.writeFileSync("tsconfig.json", JSON.stringify(tsconfig, null, 2));
+        console.log("✅ Archivo tsconfig.json generado correctamente.");
     }
+
 }

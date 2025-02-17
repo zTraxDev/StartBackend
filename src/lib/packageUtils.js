@@ -8,11 +8,11 @@ export function writePackageJson(projectName, useTypeScript) {
         name: projectName.toLowerCase().replace(/\s+/g, "-"),
         version: "1.0.0",
         main: "src/index.js",
-        type: "module",
+        type: useTypeScript ? "commonjs" : 'module',
         scripts: {
             start: useTypeScript ? "node dist/index.js" : "node src/index.js",
             dev: useTypeScript
-                ? 'nodemon --watch "src/**/*.ts" --exec "ts-node" src/index.ts'
+                ? "tsc-watch --onSuccess \"npm run start\""
                 : "nodemon src/index.js",
             build: useTypeScript ? "tsc" : undefined,
         },

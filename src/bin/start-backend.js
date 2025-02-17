@@ -20,7 +20,7 @@ import path from "path";
 
     // Crear el proyecto con las opciones seleccionadas
     generateFiles(answers.projectName, {
-      useTypeScript: answers.typescript,
+      useTypeScript: answers.useTypeScript,
       useMongoDB: answers.database === "MongoDB",
       database: answers.database,
       useMVC: answers.useMVC,

@@ -50,10 +50,6 @@ function createFolderStructure(basePath, options) {
     if (options.useTypeScript) {
         createFolder(path.resolve(basePath, 'dist'));
     }
-    
-    if (options.useLogger) {
-        createFolder(path.resolve(srcPath, 'logger'));
-    }
 
     if (options.useMVC) {
         const mvcFolders = ['controllers', 'routes'];
@@ -71,7 +67,7 @@ function generateMvcFiles(basePath, options) {
     const srcPath = path.resolve(basePath, 'src');
 
     if (options.framework === 'Hono') {
-        generateHonoMvcFiles(srcPath, ext);
+        generateHonoMvcFiles(srcPath, ext, options);
     } else {
         generateExpressFastifyMvcFiles(srcPath, ext, options);
     }
@@ -79,19 +75,40 @@ function generateMvcFiles(basePath, options) {
 
 function generateExpressFastifyMvcFiles(srcPath, ext, options) {
     // Generar Controlador
-    const controllerContent = `
+    const controllerContent = options.useTypeScript ? `
+import { Request, Response } from 'express';
+
+export const exampleController = (_req: Request, res: Response) => {
+    res.send('¡Hola desde el controlador de ejemplo!');
+};
+    `.trim() : `
 export const exampleController = (req, res) => {
     res.send('¡Hola desde el controlador de ejemplo!');
 };
     `.trim();
+
     writeFile(path.resolve(srcPath, 'controllers', `example.controller${ext}`), controllerContent);
 
     // Generar Modelo (si aplica)
     if (options.database === 'MongoDB' || (options.database !== 'MongoDB' && options.orm !== 'Ninguno')) {
         let modelContent = '';
-
+        
         if (options.database === 'MongoDB') {
-            modelContent = `
+            modelContent = options.useTypeScript ? `
+import { Schema, model } from 'mongoose';
+
+interface IExample {
+    name: string;
+    age: number;
+}
+
+const exampleSchema = new Schema<IExample>({
+    name: { type: String, required: true },
+    age: { type: Number, required: true }
+});
+
+export const Example = model<IExample>('Example', exampleSchema);
+            `.trim() : `
 import mongoose from 'mongoose';
 const exampleSchema = new mongoose.Schema({
     name: String,
@@ -99,8 +116,37 @@ const exampleSchema = new mongoose.Schema({
 });
 export const Example = mongoose.model('Example', exampleSchema);
             `.trim();
+            
         } else if (options.orm === 'Sequelize') {
-            modelContent = `
+            modelContent = options.useTypeScript ? `
+import { DataTypes, Model, Optional } from 'sequelize';
+import { sequelize } from '../config/db${ext}';
+
+interface ExampleAttributes {
+    id: number;
+    name: string;
+    age: number;
+}
+
+interface ExampleCreationAttributes extends Optional<ExampleAttributes, 'id'> {}
+
+class Example extends Model<ExampleAttributes, ExampleCreationAttributes> 
+    implements ExampleAttributes {
+    public id!: number;
+    public name!: string;
+    public age!: number;
+}
+
+Example.init({
+    name: DataTypes.STRING,
+    age: DataTypes.INTEGER,
+}, {
+    sequelize,
+    modelName: 'Example'
+});
+
+export default Example;
+            `.trim() : `
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../config/db${ext}';
 
@@ -116,8 +162,23 @@ Example.init({
 
 export default Example;
             `.trim();
+            
         } else if (options.orm === 'TypeORM') {
-            modelContent = `
+            modelContent = options.useTypeScript ? `
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Example {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column()
+    name: string;
+
+    @Column()
+    age: number;
+}
+            `.trim() : `
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
@@ -134,12 +195,19 @@ export class Example {
             `.trim();
         }
 
-        // 🔥 Escribir archivo del modelo
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
 
     // Generar Ruta
-    const routeContent = `
+    const routeContent = options.useTypeScript ? `
+import { Router } from 'express';
+import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
+
+const router = Router();
+router.get('/example', exampleController);
+
+export default router;
+    `.trim() : `
 import { Router } from 'express';
 import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
 
@@ -148,24 +216,42 @@ router.get('/example', exampleController);
 
 export default router;
     `.trim();
+
     writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
 }
-
 
 function generateHonoMvcFiles(srcPath, ext, options = {}) {
     options.database = options.database || 'MongoDB';
     options.orm = options.orm || 'Ninguno';
 
-    const controllerContent = `
+    // Controlador
+    const controllerContent = options.useTypeScript ? `
+import { Context } from 'hono';
+
+export const exampleController = (c: Context) => {
+    return c.json({ message: '¡Hola desde el controlador de ejemplo!' });
+};
+    `.trim() : `
 export const exampleController = (c) => {
     return c.json({ message: '¡Hola desde el controlador de ejemplo!' });
 };
     `.trim();
+
     writeFile(path.resolve(srcPath, 'controllers', `example.controller${ext}`), controllerContent);
 
-    const routeContent = `
+    // **Archivo de rutas**
+    const routesContent = options.useTypeScript ? `
 import { Hono } from 'hono';
-import { exampleController } from '../controllers/example.controller.js${ext.slice(0, -3)}';
+import { exampleController } from '../controllers/example.controller${ext.slice(0, -3)}';
+
+const exampleRouter = new Hono();
+
+exampleRouter.get('/example', exampleController);
+
+export default exampleRouter;
+    `.trim() : `
+import { Hono } from 'hono';
+import { exampleController } from '../controllers/example.controller.js';
 
 const exampleRouter = new Hono();
 
@@ -173,11 +259,22 @@ exampleRouter.get('/example', exampleController);
 
 export default exampleRouter;
     `.trim();
-    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routeContent);
 
-    const appContent = `
+    writeFile(path.resolve(srcPath, 'routes', `example.routes${ext}`), routesContent);
+
+    // App principal
+    const appContent = options.useTypeScript ? `
 import { Hono } from 'hono';
-import exampleRouter from './routes/example.routes.js${ext.slice(0, -3)}';
+import exampleRouter from './routes/example.routes${ext.slice(0, -3)}';
+
+const app = new Hono();
+
+app.route('/', exampleRouter);
+
+export default app;
+    `.trim() : `
+import { Hono } from 'hono';
+import exampleRouter from './routes/example.routes.js';
 
 const app = new Hono();
 
@@ -185,67 +282,66 @@ app.route('/', exampleRouter);
 
 export default app;
     `.trim();
+
     writeFile(path.resolve(srcPath, `app${ext}`), appContent);
 
-    const indexContent = `
+    // Index (Entry point)
+    const indexContent = options.useTypeScript ? `
 import { serve } from '@hono/node-server';
-import { config } from './config/config.js'
-import app from './app.js${ext.slice(0, -3)}';
+import { config } from './config/config${ext.slice(0, -3)}';
+import app from './app${ext.slice(0, -3)}';
+
+serve({
+    fetch: app.fetch,
+    port: config.port as number
+}, () => {
+    console.log(\`🚀 Servidor Hono corriendo en http://localhost:\${config.port}\`);
+});
+    `.trim() : `
+import { serve } from '@hono/node-server';
+import { config } from './config/config.js';
+import app from './app.js';
 
 serve(app).addListener('listening', () => {
     console.log(\`🚀 Servidor Hono corriendo en http://localhost:\${config.port}\`);
-})
+});
     `.trim();
+
     writeFile(path.resolve(srcPath, `index${ext}`), indexContent);
 
-    // 🔥 Generación del modelo
+    // Modelos si hay base de datos
     if (options.database === 'MongoDB' || (options.database !== 'MongoDB' && options.orm !== 'Ninguno')) {
         let modelContent = '';
 
         if (options.database === 'MongoDB') {
-            modelContent = `
+            modelContent = options.useTypeScript ? `
+import { Schema, model } from 'mongoose';
+
+export interface IExample {
+    name: string;
+    age: number;
+}
+
+const exampleSchema = new Schema<IExample>({
+    name: { type: String, required: true },
+    age: { type: Number, required: true }
+});
+
+export const Example = model<IExample>('Example', exampleSchema);
+            `.trim() : `
 import mongoose from 'mongoose';
+
 const exampleSchema = new mongoose.Schema({
     name: String,
     age: Number,
 });
+
 export const Example = mongoose.model('Example', exampleSchema);
-            `.trim();
-        } else if (options.orm === 'Sequelize') {
-            modelContent = `
-import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/db${ext}';
-
-class Example extends Model {}
-
-Example.init({
-    name: DataTypes.STRING,
-    age: DataTypes.INTEGER,
-}, {
-    sequelize,
-    modelName: 'Example',
-});
-
-export default Example;
-            `.trim();
-        } else if (options.orm === 'TypeORM') {
-            modelContent = `
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-
-@Entity()
-export class Example {
-    @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column()
-    name: string;
-
-    @Column()
-    age: number;
-}
             `.trim();
         }
 
         writeFile(path.resolve(srcPath, 'models', `example.model${ext}`), modelContent);
     }
- }
+}
+
+// En dependencyUtils.js actualizar las dependencias de TypeScript
